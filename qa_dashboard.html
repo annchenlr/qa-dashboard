@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Queue Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f1;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e2e0d8;
+    --text: #1a1916;
+    --text-muted: #7a7870;
+    --text-faint: #b0ae a6;
+    --green: #1a8a5e;
+    --green-bg: #e8f5ef;
+    --amber: #c47d12;
+    --amber-bg: #fdf3e3;
+    --red: #c0392b;
+    --red-bg: #fdecea;
+    --blue: #2563a8;
+    --blue-bg: #e8f0fb;
+    --hp-color: #c0392b;
+    --hp-bg: #fdecea;
+    --t1-color: #2563a8;
+    --t1-bg: #e8f0fb;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 28px; height: 28px; background: var(--text);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  }
+  .logo-mark span { color: white; font-size: 11px; font-weight: 600; letter-spacing: -0.5px; }
+  .topbar-title { font-size: 15px; font-weight: 500; color: var(--text); }
+  .topbar-sub { font-size: 12px; color: var(--text-muted); margin-left: 4px; }
+
+  .refresh-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 6px 12px;
+    font-size: 12px; font-weight: 500; color: var(--text-muted);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .refresh-btn:hover { background: var(--border); color: var(--text); }
+  .refresh-btn.spinning .icon { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .main { padding: 24px 28px; max-width: 1200px; margin: 0 auto; }
+
+  .config-banner {
+    background: #fffbe6; border: 1px solid #f5d76e;
+    border-radius: var(--radius); padding: 14px 18px;
+    margin-bottom: 20px; font-size: 13px; color: #7a6a00;
+    display: none;
+  }
+  .config-banner.show { display: block; }
+  .config-banner strong { font-weight: 600; }
+
+  .error-banner {
+    background: var(--red-bg); border: 1px solid #f5c0bc;
+    border-radius: var(--radius); padding: 14px 18px;
+    margin-bottom: 20px; font-size: 13px; color: var(--red);
+    display: none;
+  }
+  .error-banner.show { display: block; }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .stat-label { font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .stat-value { font-size: 28px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--text); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.red { color: var(--red); }
+  .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  .pace-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .pace-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .pace-title { font-size: 13px; font-weight: 500; color: var(--text); }
+  .pace-count { font-size: 13px; font-family: 'DM Mono', monospace; color: var(--text-muted); }
+  .pace-track { background: var(--surface2); border-radius: 99px; height: 8px; overflow: hidden; }
+  .pace-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width 0.6s ease; }
+  .pace-fill.amber { background: var(--amber); }
+  .pace-fill.red { background: var(--red); }
+  .pace-days { display: flex; justify-content: space-between; margin-top: 8px; }
+  .pace-day { font-size: 11px; color: var(--text-muted); }
+  .pace-day.today { font-weight: 600; color: var(--text); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-title { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .panel-body { padding: 4px 0; }
+
+  .reviewer-item {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .reviewer-item:last-child { border-bottom: none; }
+  .reviewer-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .reviewer-info { flex: 1; min-width: 0; }
+  .reviewer-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .reviewer-meta { font-size: 11px; color: var(--text-muted); }
+  .reviewer-count { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .mini-track { background: var(--surface2); border-radius: 99px; height: 4px; overflow: hidden; }
+  .mini-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width 0.6s ease; }
+
+  .queue-item {
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .queue-item:last-child { border-bottom: none; }
+  .queue-summary { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+  .queue-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .queue-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px; border-radius: 99px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .badge-hp { background: var(--hp-bg); color: var(--hp-color); }
+  .badge-t1 { background: var(--t1-bg); color: var(--t1-color); }
+  .badge-other { background: var(--surface2); color: var(--text-muted); }
+  .badge-done { background: var(--green-bg); color: var(--green); }
+  .badge-flagged { background: var(--red-bg); color: var(--red); }
+
+  .health-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .health-row:last-child { border-bottom: none; }
+  .health-label { color: var(--text-muted); }
+  .health-value { font-weight: 500; font-family: 'DM Mono', monospace; color: var(--text); }
+  .health-value.green { color: var(--green); }
+  .health-value.red { color: var(--red); }
+  .health-value.amber { color: var(--amber); }
+
+  .last-updated {
+    text-align: center; font-size: 11px; color: var(--text-muted);
+    padding: 16px 0 8px;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  .loading-text { height: 14px; width: 60%; }
+  .loading-num { height: 28px; width: 40%; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-mark"><span>QA</span></div>
+    <span class="topbar-title">QA Queue Dashboard</span>
+    <span class="topbar-sub" id="week-label">Week of —</span>
+  </div>
+  <button class="refresh-btn" onclick="loadData()">
+    <span class="icon" id="refresh-icon">↻</span>
+    <span>Refresh</span>
+  </button>
+</div>
+
+<div class="main">
+
+  <div class="config-banner" id="config-banner">
+    <strong>Setup required:</strong> Open this file in a text editor and fill in your <code>JIRA_SITE</code>, <code>JIRA_EMAIL</code>, and <code>JIRA_TOKEN</code> at the top of the script section.
+  </div>
+
+  <div class="error-banner" id="error-banner"></div>
+
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-label">Done this week</div>
+      <div class="stat-value green" id="stat-done">—</div>
+      <div class="stat-sub" id="stat-done-sub"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Needs review</div>
+      <div class="stat-value amber" id="stat-needs">—</div>
+      <div class="stat-sub">In queue now</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">T1 held</div>
+      <div class="stat-value" id="stat-held">—</div>
+      <div class="stat-sub">Pending release</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Flagged</div>
+      <div class="stat-value red" id="stat-flagged">—</div>
+      <div class="stat-sub">Needs attention</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Team target</div>
+      <div class="stat-value" id="stat-target">375</div>
+      <div class="stat-sub">Per week (75 × 5)</div>
+    </div>
+  </div>
+
+  <div class="pace-card">
+    <div class="pace-header">
+      <span class="pace-title">Team weekly progress</span>
+      <span class="pace-count" id="pace-label">— / 375</span>
+    </div>
+    <div class="pace-track">
+      <div class="pace-fill" id="pace-fill" style="width: 0%"></div>
+    </div>
+    <div class="pace-days">
+      <span class="pace-day" id="day-mon">Mon</span>
+      <span class="pace-day" id="day-tue">Tue</span>
+      <span class="pace-day" id="day-wed">Wed</span>
+      <span class="pace-day" id="day-thu">Thu</span>
+      <span class="pace-day" id="day-fri">Fri</span>
+    </div>
+  </div>
+
+  <div class="three-col">
+    <div class="panel" id="reviewers-panel">
+      <div class="panel-header"><span class="panel-title">Reviewer progress</span></div>
+      <div class="panel-body" id="reviewers-body">
+        <div class="reviewer-item"><div class="skeleton loading-text"></div></div>
+        <div class="reviewer-item"><div class="skeleton loading-text"></div></div>
+        <div class="reviewer-item"><div class="skeleton loading-text"></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Recent queue activity</span></div>
+      <div class="panel-body" id="queue-body">
+        <div class="queue-item"><div class="skeleton loading-text"></div></div>
+        <div class="queue-item"><div class="skeleton loading-text"></div></div>
+        <div class="queue-item"><div class="skeleton loading-text"></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Queue health</span></div>
+      <div class="panel-body" id="health-body">
+        <div class="health-row"><span class="health-label">HP in queue</span><span class="health-value" id="h-hp">—</span></div>
+        <div class="health-row"><span class="health-label">T1 held</span><span class="health-value" id="h-t1">—</span></div>
+        <div class="health-row"><span class="health-label">No QA required</span><span class="health-value" id="h-other">—</span></div>
+        <div class="health-row"><span class="health-label">Flagged</span><span class="health-value red" id="h-flagged">—</span></div>
+        <div class="health-row"><span class="health-label">Done this week</span><span class="health-value green" id="h-done">—</span></div>
+        <div class="health-row"><span class="health-label">In review now</span><span class="health-value amber" id="h-inreview">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="last-updated" id="last-updated">Not yet loaded</div>
+</div>
+
+<script>
+  // ─── CONFIGURATION ───────────────────────────────────────────────────────────
+  const JIRA_SITE  = 'annchen.atlassian.net';   // e.g. acme.atlassian.net
+  const JIRA_EMAIL = 'ann.chen@evenuplaw.com';     // your Jira login email
+  const JIRA_TOKEN = 'ATATT3xFfGF0qIlYKdoi10ErSYBm1D_WLimaAZ1nMhteMHdBsX4aQh1K4XFhoPxx_bNLbDYl0nLjX9CkjqLTTDqarjY-58bor3Y_viVSKClPwO0bPAlywNt-u-mKeIlrfYOskNHuh_JVSVZ9KwhAOLoaTDi-oo6-2OZEqcKWI57TyjxkZkkiAx8=0C1379CA
+  
+  ;             // API token from id.atlassian.com
+  const PROJECT_KEY = 'QA';                        // your Jira project key
+  const TEAM_TARGET = 375;                         // 75 per reviewer × 5 reviewers
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const REVIEWERS = [
+    { name: 'Ann Chen',         initials: 'AC',  bg: '#e8f5ef', color: '#0F6E56' },
+    { name: 'Elizabeth Towery', initials: 'LIZ', bg: '#e8f0fb', color: '#185FA5' },
+    { name: 'Isabella Santos',  initials: 'IS',  bg: '#EEEDFE', color: '#534AB7' },
+  ];
+
+  const PERSONAL_TARGET = 75;
+
+  function getAuthHeader() {
+    return 'Basic ' + btoa(JIRA_EMAIL + ':' + JIRA_TOKEN);
+  }
+
+  function getWeekStart() {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const mon = new Date(d.setDate(diff));
+    mon.setHours(0,0,0,0);
+    return mon;
+  }
+
+  function formatDate(d) {
+    return d.toISOString().split('T')[0];
+  }
+
+  function getDayLabel() {
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    return days[new Date().getDay()];
+  }
+
+  async function jiraFetch(jql, fields = 'summary,status,assignee,created,resolutiondate,customfield_10042', maxResults = 100) {
+    const url = `https://${JIRA_SITE}/rest/api/3/search?jql=${encodeURIComponent(jql)}&fields=${fields}&maxResults=${maxResults}`;
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': getAuthHeader(),
+        'Accept': 'application/json'
+      }
+    });
+    if (!res.ok) throw new Error(`Jira API error: ${res.status} ${res.statusText}`);
+    return res.json();
+  }
+
+  function getStatusBadge(statusName) {
+    const s = (statusName || '').toLowerCase();
+    if (s.includes('done')) return '<span class="badge badge-done">Done</span>';
+    if (s.includes('flagged')) return '<span class="badge badge-flagged">Flagged</span>';
+    if (s.includes('needs')) return '<span class="badge badge-t1">Needs Review</span>';
+    if (s.includes('held')) return '<span class="badge badge-t1">Held T1</span>';
+    if (s.includes('review')) return '<span class="badge badge-other">In Review</span>';
+    return `<span class="badge badge-other">${statusName}</span>`;
+  }
+
+  function getTierBadge(tier) {
+    if (!tier) return '';
+    const t = tier.toLowerCase();
+    if (t.includes('high')) return '<span class="badge badge-hp">HP</span>';
+    if (t.includes('tier 1') || t === 'tier1') return '<span class="badge badge-t1">T1</span>';
+    return '<span class="badge badge-other">Other</span>';
+  }
+
+  function timeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs/24)}d ago`;
+  }
+
+  async function loadData() {
+    if (JIRA_SITE === 'ann.chen.atlassian.net') {
+      document.getElementById('config-banner').classList.add('show');
+      renderPlaceholder();
+      return;
+    }
+
+    const btn = document.querySelector('.refresh-btn');
+    btn.classList.add('spinning');
+    document.getElementById('error-banner').classList.remove('show');
+
+    try {
+      const weekStart = formatDate(getWeekStart());
+
+      const [allIssues, doneThisWeek] = await Promise.all([
+        jiraFetch(`project = ${PROJECT_KEY} AND statusCategory != Done ORDER BY created DESC`, 'summary,status,assignee,created,customfield_10042', 200),
+        jiraFetch(`project = ${PROJECT_KEY} AND status = Done AND resolutiondate >= "${weekStart}"`, 'summary,status,assignee,resolutiondate,customfield_10042', 500),
+      ]);
+
+      const issues = allIssues.issues || [];
+      const doneIssues = doneThisWeek.issues || [];
+
+      const counts = {
+        needsReview: 0, inReview: 0, held: 0,
+        flagged: 0, noQA: 0, done: doneIssues.length
+      };
+
+      issues.forEach(i => {
+        const s = (i.fields.status?.name || '').toLowerCase();
+        if (s.includes('needs review')) counts.needsReview++;
+        else if (s.includes('in review')) counts.inReview++;
+        else if (s.includes('held')) counts.held++;
+        else if (s.includes('flagged')) counts.flagged++;
+        else if (s.includes('no qa')) counts.noQA++;
+      });
+
+      document.getElementById('stat-done').textContent = counts.done;
+      document.getElementById('stat-done-sub').textContent = `Since ${weekStart}`;
+      document.getElementById('stat-needs').textContent = counts.needsReview;
+      document.getElementById('stat-held').textContent = counts.held;
+      document.getElementById('stat-flagged').textContent = counts.flagged;
+
+      const pct = Math.min(100, Math.round((counts.done / TEAM_TARGET) * 100));
+      document.getElementById('pace-label').textContent = `${counts.done} / ${TEAM_TARGET}`;
+      const fill = document.getElementById('pace-fill');
+      fill.style.width = pct + '%';
+      fill.className = 'pace-fill' + (pct >= 80 ? ' green' : pct >= 40 ? '' : ' red');
+
+      const today = getDayLabel();
+      ['mon','tue','wed','thu','fri'].forEach(d => {
+        const el = document.getElementById('day-' + d);
+        el.className = 'pace-day' + (d.charAt(0).toUpperCase() + d.slice(1) === today ? ' today' : '');
+      });
+
+      document.getElementById('week-label').textContent = `Week of ${weekStart}`;
+
+      document.getElementById('h-hp').textContent = issues.filter(i => {
+        const tier = i.fields.customfield_10042?.value || '';
+        return tier.toLowerCase().includes('high');
+      }).length;
+      document.getElementById('h-t1').textContent = counts.held;
+      document.getElementById('h-other').textContent = counts.noQA;
+      document.getElementById('h-flagged').textContent = counts.flagged;
+      document.getElementById('h-flagged').className = 'health-value' + (counts.flagged > 0 ? ' red' : ' green');
+      document.getElementById('h-done').textContent = counts.done;
+      document.getElementById('h-inreview').textContent = counts.inReview;
+
+      const reviewerBody = document.getElementById('reviewers-body');
+      reviewerBody.innerHTML = REVIEWERS.map(r => {
+        const myDone = doneIssues.filter(i => {
+          const name = i.fields.assignee?.displayName || '';
+          return name.toLowerCase().includes(r.name.split(' ')[0].toLowerCase());
+        }).length;
+        const pct = Math.min(100, Math.round((myDone / PERSONAL_TARGET) * 100));
+        return `
+          <div class="reviewer-item">
+            <div class="reviewer-top">
+              <div class="avatar" style="background:${r.bg};color:${r.color};">${r.initials}</div>
+              <div class="reviewer-info">
+                <div class="reviewer-name">${r.name}</div>
+                <div class="reviewer-meta">${myDone} / ${PERSONAL_TARGET} reviews</div>
+              </div>
+              <div class="reviewer-count">${pct}%</div>
+            </div>
+            <div class="mini-track"><div class="mini-fill" style="width:${pct}%"></div></div>
+          </div>`;
+      }).join('');
+
+      const recent = [...issues]
+        .sort((a,b) => new Date(b.fields.created) - new Date(a.fields.created))
+        .slice(0, 6);
+
+      document.getElementById('queue-body').innerHTML = recent.length === 0
+        ? '<div class="queue-item"><span style="color:var(--text-muted);font-size:13px;">No active tickets</span></div>'
+        : recent.map(i => {
+          const tier = i.fields.customfield_10042?.value || '';
+          const badge = getTierBadge(tier);
+          const status = getStatusBadge(i.fields.status?.name);
+          return `
+            <div class="queue-item">
+              <div style="min-width:0">
+                <div class="queue-summary">${i.fields.summary || i.key}</div>
+                <div class="queue-meta">${i.key} · ${timeAgo(i.fields.created)}</div>
+              </div>
+              <div class="queue-right">${badge}${status}</div>
+            </div>`;
+        }).join('');
+
+      document.getElementById('last-updated').textContent = `Last updated ${new Date().toLocaleTimeString()}`;
+
+    } catch (err) {
+      const eb = document.getElementById('error-banner');
+      eb.textContent = `Could not load data: ${err.message}. Check your JIRA_SITE, JIRA_EMAIL, and JIRA_TOKEN values.`;
+      eb.classList.add('show');
+    } finally {
+      btn.classList.remove('spinning');
+    }
+  }
+
+  function renderPlaceholder() {
+    const REVIEWERS_PLACEHOLDER = [
+      { name: 'Ann Chen', initials: 'AC', bg: '#e8f5ef', color: '#0F6E56', done: 14 },
+      { name: 'Elizabeth Towery', initials: 'LIZ', bg: '#e8f0fb', color: '#185FA5', done: 13 },
+      { name: 'Isabella Santos', initials: 'IS', bg: '#EEEDFE', color: '#534AB7', done: 15 },
+    ];
+    document.getElementById('stat-done').textContent = '42';
+    document.getElementById('stat-needs').textContent = '7';
+    document.getElementById('stat-held').textContent = '5';
+    document.getElementById('stat-flagged').textContent = '2';
+    document.getElementById('pace-label').textContent = '42 / 375';
+    document.getElementById('pace-fill').style.width = '11%';
+    document.getElementById('week-label').textContent = 'Sample data — configure to go live';
+
+    document.getElementById('reviewers-body').innerHTML = REVIEWERS_PLACEHOLDER.map(r => {
+      const pct = Math.round((r.done / PERSONAL_TARGET) * 100);
+      return `
+        <div class="reviewer-item">
+          <div class="reviewer-top">
+            <div class="avatar" style="background:${r.bg};color:${r.color};">${r.initials}</div>
+            <div class="reviewer-info">
+              <div class="reviewer-name">${r.name}</div>
+              <div class="reviewer-meta">${r.done} / ${PERSONAL_TARGET} reviews</div>
+            </div>
+            <div class="reviewer-count">${pct}%</div>
+          </div>
+          <div class="mini-track"><div class="mini-fill" style="width:${pct}%"></div></div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('queue-body').innerHTML = [
+      { s: 'Rubenstein Law / John S.', k: 'QA-17', t: '2m ago', tier: 'HP' },
+      { s: 'Fielding Law / Hector M.', k: 'QA-14', t: '18m ago', tier: 'T1' },
+      { s: 'Shane Smith Law / Lisa R.', k: 'QA-15', t: '34m ago', tier: 'HP' },
+    ].map(i => `
+      <div class="queue-item">
+        <div style="min-width:0">
+          <div class="queue-summary">${i.s}</div>
+          <div class="queue-meta">${i.k} · ${i.t}</div>
+        </div>
+        <div class="queue-right">
+          <span class="badge ${i.tier === 'HP' ? 'badge-hp' : 'badge-t1'}">${i.tier}</span>
+          <span class="badge badge-other">Needs Review</span>
+        </div>
+      </div>`).join('');
+
+    ['h-hp','h-t1','h-other','h-flagged','h-done','h-inreview'].forEach((id, i) => {
+      document.getElementById(id).textContent = [3, 5, 12, 2, 42, 2][i];
+    });
+
+    document.getElementById('last-updated').textContent = 'Sample data — add your credentials to go live';
+  }
+
+  loadData();
+  setInterval(loadData, 5 * 60 * 1000);
+</script>
+</body>
+</html>
